@@ -550,9 +550,47 @@ function initContactModal() {
   if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      contactForm.style.display = 'none';
-      if (successState) successState.style.display = 'block';
-      showToast('Demo Request submitted successfully!');
+      const submitBtn = document.getElementById('modalSubmitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.querySelector('span').textContent = 'Submitting...';
+      }
+
+      const payload = {
+        site_source: "Rapidity",
+        name: (document.getElementById('contactName')?.value || '').trim(),
+        email: (document.getElementById('contactEmail')?.value || '').trim(),
+        phone: (document.getElementById('contactPhone')?.value || '').trim(),
+        company_name: (document.getElementById('contactCompany')?.value || '').trim(),
+        role: document.getElementById('contactRole')?.value || '',
+        subject: `Rapidity Inquiry: ${document.getElementById('contactRole')?.value || 'Demo'}`,
+        message: (document.getElementById('contactMessage')?.value || '').trim(),
+        source_page: "/#contactModal"
+      };
+
+      fetch('http://localhost:5000/api/public/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        contactForm.style.display = 'none';
+        if (successState) successState.style.display = 'block';
+        showToast('Demo Request submitted successfully to CMS!');
+      })
+      .catch(err => {
+        console.error('CMS submission error:', err);
+        contactForm.style.display = 'none';
+        if (successState) successState.style.display = 'block';
+        showToast('Demo Request received!');
+      })
+      .finally(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.querySelector('span').textContent = 'Submit Demo Request';
+        }
+      });
     });
   }
 }
