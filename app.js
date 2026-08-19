@@ -548,51 +548,68 @@ function initContactModal() {
   });
 
   if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const submitBtn = document.getElementById('modalSubmitBtn');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.querySelector('span').textContent = 'Submitting...';
+  // Dynamic API endpoint: Uses localhost during local development, and live server IP/domain when deployed
+  const isLocal = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  
+  const CMS_ENQUIRY_URL = isLocal
+    ? 'http://localhost:5000/api/public/enquiry'
+    : 'http://58.84.14.54:5000/api/public/enquiry'; // Live SAAIT Backend API
+
+  contactForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      const span = submitBtn.querySelector('span');
+      if (span) span.textContent = 'Submitting...';
+    }
+
+    const role = document.getElementById('contactRole')?.value || '';
+    const payload = {
+      site_source: "Rapidity",
+      name: (document.getElementById('contactName')?.value || '').trim(),
+      email: (document.getElementById('contactEmail')?.value || '').trim(),
+      contact_number: (document.getElementById('contactPhone')?.value || '').trim(),
+      phone: (document.getElementById('contactPhone')?.value || '').trim(),
+      company_name: (document.getElementById('contactCompany')?.value || '').trim(),
+      role: role,
+      subject: `Rapidity Inquiry: ${role || 'Demo'}`,
+      message: (document.getElementById('contactMessage')?.value || '').trim(),
+      source_page: "/#contactModal"
+    };
+
+    fetch(CMS_ENQUIRY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(async (res) => {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server responded with status ${res.status}`);
       }
-
-      const payload = {
-        site_source: "Rapidity",
-        name: (document.getElementById('contactName')?.value || '').trim(),
-        email: (document.getElementById('contactEmail')?.value || '').trim(),
-        phone: (document.getElementById('contactPhone')?.value || '').trim(),
-        company_name: (document.getElementById('contactCompany')?.value || '').trim(),
-        role: document.getElementById('contactRole')?.value || '',
-        subject: `Rapidity Inquiry: ${document.getElementById('contactRole')?.value || 'Demo'}`,
-        message: (document.getElementById('contactMessage')?.value || '').trim(),
-        source_page: "/#contactModal"
-      };
-
-      fetch('http://localhost:5000/api/public/enquiry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(data => {
-        contactForm.style.display = 'none';
-        if (successState) successState.style.display = 'block';
-        showToast('Demo Request submitted successfully to CMS!');
-      })
-      .catch(err => {
-        console.error('CMS submission error:', err);
-        contactForm.style.display = 'none';
-        if (successState) successState.style.display = 'block';
-        showToast('Demo Request received!');
-      })
-      .finally(() => {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.querySelector('span').textContent = 'Submit Demo Request';
-        }
-      });
+      return res.json();
+    })
+    .then(data => {
+      contactForm.style.display = 'none';
+      if (successState) successState.style.display = 'block';
+      showToast('🎉 Demo Request submitted successfully to CMS!');
+    })
+    .catch(err => {
+      console.error('CMS submission error:', err);
+      showToast('❌ Submission failed. Please try again.', 'error');
+    })
+    .finally(() => {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        const span = submitBtn.querySelector('span');
+        if (span) span.textContent = 'Submit Demo Request';
+      }
     });
-  }
+  });
+}
+
 }
 
 /**
